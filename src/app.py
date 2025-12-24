@@ -105,3 +105,43 @@ def signup_for_activity(activity_name: str, email: str):
    # Add student
    activity["participants"].append(email)
    return {"message": f"Signed up {email} for {activity_name}"}             
+
+
+@app.post("/activities/{activity_name}/unregister")
+def unregister(activity_name: str, email: str):
+    """Unregister a student from an activity"""
+    # Validate activity exists
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    activity = activities[activity_name]
+
+    # Validate student is signed up
+    if email not in activity["participants"]:
+        raise HTTPException(status_code=400, detail="Student is not signed up")
+
+    activity["participants"].remove(email)
+    return {"message": f"Unregistered {email} from {activity_name}"}
+
+
+if __name__ == "__main__":
+    # Start the app with uvicorn; if the default port is in use try the next ports.
+    import os
+    import uvicorn
+
+    start_port = int(os.environ.get("PORT", 8000))
+    max_tries = 50
+    port = start_port
+
+    for _ in range(max_tries):
+        try:
+            print(f"Starting server on port {port} (host 0.0.0.0)")
+            uvicorn.run("src.app:app", host="0.0.0.0", port=port)
+            break
+        except OSError as e:
+            # errno 98 is Address already in use on many systems
+            if getattr(e, "errno", None) == 98 or "Address already in use" in str(e):
+                print(f"Port {port} in use, trying port {port+1}")
+                port += 1
+                continue
+            raise
